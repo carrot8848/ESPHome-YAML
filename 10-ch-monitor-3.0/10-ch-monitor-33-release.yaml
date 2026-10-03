@@ -1,75 +1,68 @@
 substitutions:
-  name: "6-ch-mon-v3_3"
-  friendly_name: "6通道电量计量模块v3.3"
-  ch1: "ch_1"   #可根据需要修改名称
-  ch2: "ch_2"   #可根据需要修改名称
-  ch3: "ch_3"   #可根据需要修改名称
-  ch4: "ch_4"   #可根据需要修改名称
-  ch5: "ch_5"   #可根据需要修改名称
-  ch6: "ch_6"   #可根据需要修改名称
+  name: "10-ch-monitor-v33"
+  friendly_name: "10通道电量计量模块v3.3"
+  ch1: "ch_01"   #可根据需要修改名称
+  ch2: "ch_02"   #可根据需要修改名称
+  ch3: "ch_03"   #可根据需要修改名称
+  ch4: "ch_04"   #可根据需要修改名称
+  ch5: "ch_05"   #可根据需要修改名称
+  ch6: "ch_06"   #可根据需要修改名称
+  ch7: "ch_07"   #可根据需要修改名称
+  ch8: "ch_08"   #可根据需要修改名称
+  ch9: "ch_09"   #可根据需要修改名称
+  ch10: "ch_10"  #可根据需要修改名称
+
 esphome:
   name: "${name}"
   name_add_mac_suffix: True
   friendly_name: "${friendly_name}"
   min_version: 2026.8.0
   project:
-    name: carrot8848.6-ch-monitor
+    name: carrot8848.10-ch-monitor
     version: "3.3"
   on_boot:
     priority: -100
     then:
       - lambda: |-
-          id(sensor_bl0906)->set_update_interval(static_cast<uint32_t>(id(bl0906_update_interval).state * 1000));
-          id(sensor_bl0906).start_poller();
+          id(sensor_bl0910)->set_update_interval(static_cast<uint32_t>(id(bl0906_update_interval).state * 1000));
+          id(sensor_bl0910).start_poller();
 esp32:
-  variant: esp32c3
+  variant: ESP32C3
+  flash_size: 4MB
   framework:
     type: esp-idf
-    # advanced:
-    #   enable_ota_rollback: false
+    advanced: 
+      enable_ota_rollback: false
+
 # Enable logging
 logger:
+  level: DEBUG
   hardware_uart: UART0
-  level: debug
-  # 增加SPI相关的调试信息
   logs:
-    sensor: warn
-
+    sensor: WARN
+  #   mqtt.component: WARN
+  #   mqtt.client: ERROR
 # Enable Home Assistant API
 api:
-  # reboot_timeout: 0s
-# 启用preferences组件用于数据持久化
-preferences:
-  flash_write_interval: 5min  # 每分钟写入一次flash，平衡数据安全和flash寿命
+
 ota:
   - platform: esphome
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  # power_save_mode: none
+  # ssid: !secret wifi_ssid
+  # password: !secret wifi_password
   # manual_ip:
-  #   static_ip: 192.168.5.13
+  #   static_ip: 192.168.5.11
   #   gateway: 192.168.5.254
   #   subnet: 255.255.255.0
-  #   dns1: 192.168.5.254
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    # ssid: "${name}"
     password: ""
 
 captive_portal:
-external_components:
-  - source:
-      type: git
-      url: https://github.com/carrot8848/bl0906_carrot8848
-      ref: main
-    components: [bl0906_carrot8848]
-    refresh: 0s
-    
 web_server:
   port: 80
   version: 3
-  # 深度定制：自研仪表盘（6ch_dashboard.*）整体替换官方 v3 通用页面，编译进固件离线可用
+  # 深度定制：自研仪表盘（energy_dashboard.*，6/10/16/3x6 通道通用）整体替换官方 v3 通用页面，编译进固件离线可用
   # 注意：不能开 local: True —— local 模式设备直接返回内嵌官方页面，css/js include 完全不生效
   css_url: ""   # 置空 = 不加载官方样式
   js_url: ""    # 置空 = 不加载官方前端脚本（<esp-app> 不注册，页面由我们的 js 构建）
@@ -89,7 +82,7 @@ web_server:
       name: "电量"
       sorting_weight: 40
     - id: sum_sensor
-      name: "6通道总和"
+      name: "10通道总和"
       sorting_weight: 11
     - id: today_energy
       name: "今日电量"
@@ -112,99 +105,100 @@ web_server:
     - id: diagnostic
       name: "诊断"
       sorting_weight: 70
-
-
+external_components:
+  - source:
+      type: git
+      url: https://github.com/carrot8848/bl0906_carrot8848
+      ref: main
+    components: [bl0906_carrot8848]
+    refresh: 0s
 status_led:
-  pin: GPIO2
+  pin: GPIO0
 
 i2c:
-  sda: 10
-  scl: 18
+  sda: 3
+  scl: 19
   scan: true
   frequency: 400kHz
   id: i2c_bus
 
 spi:
   - id: spi_bus
-    mosi_pin: 6
-    miso_pin: 7
-    clk_pin: 19
+    mosi_pin: 5
+    miso_pin: 6
+    clk_pin: 4
 bl0906_carrot8848:
+  - id: sensor_bl0910
+    chip_model: bl0910
     spi_id: spi_bus
-    cs_pin: 3
-    id: sensor_bl0906
+    cs_pin: 7
     update_interval: 10s
-    energy_statistics: true
+    instance_id: 0x910B0001
     time_id: my_time
-    instance_id: 0x906B0001  # 手动指定实例ID
-    eeprom_type: 24c02
-    # EEPROM的I2C配置（独立于BL0906的SPI通信）
+    energy_statistics: true
+    eeprom_type: 24c04
     i2c_id: i2c_bus
     address: 0x50
 sensor:
   - platform: bl0906_carrot8848
-    bl0906_carrot8848_id: sensor_bl0906
-
+    bl0906_carrot8848_id: sensor_bl0910
+    
     # 全局传感器
     frequency:
       name: '2.电网频率'
       web_server:
           sorting_group_id: basic_sensors
     temperature:
-      name: '3.BL0906芯片温度'
+      name: '3.芯片温度'
       web_server:
           sorting_group_id: basic_sensors
     voltage:
       name: '1.电网电压'
-      id: bl0906_voltage
-      accuracy_decimals: 1
+      id: bl0910_voltage
       web_server:
           sorting_group_id: basic_sensors
-
     # 总和传感器
     power_sum:
-      name: "1.6通道总功率"
+      name: "1.10通道总功率"
       web_server:
           sorting_group_id: sum_sensor
     energy_sum:
-      name: "2.6通道总电量"
+      name: "2.10通道总电量"
       web_server:
           sorting_group_id: sum_sensor
       accuracy_decimals: 2
       unit_of_measurement: kWh
-
-
     # 总电量统计传感器
     today_total_energy:
-      name: "3.6通道今日总电量"
+      name: "3.10通道今日总电量"
       unit_of_measurement: kWh
       device_class: energy
       accuracy_decimals: 2
       web_server:
           sorting_group_id: sum_sensor
     yesterday_total_energy:
-      name: "4.6通道昨日总电量"
+      name: "4.10通道昨日总电量"
       unit_of_measurement: kWh
       device_class: energy
       accuracy_decimals: 2
       web_server:
           sorting_group_id: sum_sensor
     week_total_energy:
-      name: "5.6通道本周总电量"
+      name: "5.10通道本周总电量"
       unit_of_measurement: kWh
       device_class: energy
       accuracy_decimals: 2
       web_server:
           sorting_group_id: sum_sensor
     month_total_energy:
-      name: "6.6通道本月总电量"
+      name: "6.10通道本月总电量"
       unit_of_measurement: kWh
       device_class: energy
       accuracy_decimals: 2
       web_server:
           sorting_group_id: sum_sensor
     year_total_energy:
-      name: "7.6通道今年总电量"
+      name: "7.10通道今年总电量"
       unit_of_measurement: kWh
       device_class: energy
       accuracy_decimals: 2
@@ -260,7 +254,7 @@ sensor:
         web_server:
             sorting_group_id: month_energy
       year_energy:
-        name: "${ch1} 今年电量Y"
+        name: "${ch1} 今年电量Y"  
         unit_of_measurement: kWh
         device_class: energy
         accuracy_decimals: 2
@@ -316,7 +310,7 @@ sensor:
         web_server:
             sorting_group_id: month_energy
       year_energy:
-        name: "${ch2} 今年电量Y"
+        name: "${ch2} 今年电量Y" 
         unit_of_measurement: kWh
         device_class: energy
         accuracy_decimals: 2
@@ -372,7 +366,7 @@ sensor:
         web_server:
             sorting_group_id: month_energy
       year_energy:
-        name: "${ch3} 今年电量Y"
+        name: "${ch3} 今年电量Y" 
         unit_of_measurement: kWh
         device_class: energy
         accuracy_decimals: 2
@@ -428,7 +422,7 @@ sensor:
         web_server:
             sorting_group_id: month_energy
       year_energy:
-        name: "${ch4} 今年电量Y"
+        name: "${ch4} 今年电量Y" 
         unit_of_measurement: kWh
         device_class: energy
         accuracy_decimals: 2
@@ -484,7 +478,7 @@ sensor:
         web_server:
             sorting_group_id: month_energy
       year_energy:
-        name: "${ch5} 今年电量Y"
+        name: "${ch5} 今年电量Y" 
         unit_of_measurement: kWh
         device_class: energy
         accuracy_decimals: 2
@@ -499,7 +493,7 @@ sensor:
         web_server:
             sorting_group_id: current
       power:
-        name: "${ch6} power"
+        name: "${ch6} 功率w"
         web_server:
             sorting_group_id: power
 
@@ -540,7 +534,225 @@ sensor:
         web_server:
             sorting_group_id: month_energy
       year_energy:
-        name: "${ch6} 今年电量Y"
+        name: "${ch6} 今年电量Y" 
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: year_energy
+    ch7:
+      current:
+        name: "${ch7} 电流A"
+        id: ch7_current
+        web_server:
+            sorting_group_id: current
+      power:
+        name: "${ch7} 功率w"
+        web_server:
+            sorting_group_id: power
+
+      total_energy:
+        name: "${ch7} 总电量kwh"
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: energy
+      today_energy:
+        name: "${ch7} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: today_energy
+      yesterday_energy:
+        name: "${ch7} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: yesterday_energy
+      week_energy:
+        name: "${ch7} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: week_energy
+      month_energy:
+        name: "${ch7} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: month_energy
+      year_energy:
+        name: "${ch7} 今年电量Y" 
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: year_energy
+    ch8:
+      current:
+        name: "${ch8} 电流A"
+        id: ch8_current
+        web_server:
+            sorting_group_id: current
+      power:
+        name: "${ch8} 功率w"
+        web_server:
+            sorting_group_id: power
+
+      total_energy:
+        name: "${ch8} 总电量kwh"
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: energy
+      today_energy:
+        name: "${ch8} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: today_energy
+      yesterday_energy:
+        name: "${ch8} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: yesterday_energy
+      week_energy:
+        name: "${ch8} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: week_energy
+      month_energy:
+        name: "${ch8} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: month_energy
+      year_energy:
+        name: "${ch8} 今年电量Y" 
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: year_energy
+
+    ch9:
+      current:
+        name: "${ch9} 电流A"
+        id: ch9_current
+        web_server:
+            sorting_group_id: current
+      power:
+        name: "${ch9} 功率w"
+        web_server:
+            sorting_group_id: power
+
+      total_energy:
+        name: "${ch9} 总电量kwh"
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: energy
+      today_energy:
+        name: "${ch9} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: today_energy
+      yesterday_energy:
+        name: "${ch9} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: yesterday_energy
+      week_energy:
+        name: "${ch9} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: week_energy
+      month_energy:
+        name: "${ch9} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: month_energy
+      year_energy:
+        name: "${ch9} 今年电量Y" 
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: year_energy
+
+    ch10:
+      current:
+        name: "${ch10} 电流A"
+        id: ch10_current
+        web_server:
+            sorting_group_id: current
+      power:
+        name: "${ch10} 功率w"
+        web_server:
+            sorting_group_id: power
+
+      total_energy:
+        name: "${ch10} 总电量kwh"
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: energy
+      today_energy:
+        name: "${ch10} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: today_energy
+      yesterday_energy:
+        name: "${ch10} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: yesterday_energy
+      week_energy:
+        name: "${ch10} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: week_energy
+      month_energy:
+        name: "${ch10} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+            sorting_group_id: month_energy
+      year_energy:
+        name: "${ch10} 今年电量Y" 
         unit_of_measurement: kWh
         device_class: energy
         accuracy_decimals: 2
@@ -551,104 +763,43 @@ sensor:
     name: "${name} WiFi Signal dB"
     id: wifi_signal_db
     update_interval: 60s
-    web_server:
-        sorting_group_id: diagnostic
+    icon: "mdi:wifi-strength-2"
     entity_category: "diagnostic"
+    web_server:
+          sorting_group_id: diagnostic
 
   - platform: copy # Reports the WiFi signal strength in %
     source_id: wifi_signal_db
     name: "${name} WiFi Signal Percent"
+    icon: "mdi:wifi"
     filters:
       - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
     unit_of_measurement: "%"
-    web_server:
-        sorting_group_id: diagnostic
     entity_category: "diagnostic"
-
-switch:
-  - platform: restart
-    name: "${name} 重启"
     web_server:
-        sorting_group_id: diagnostic
-  - platform: factory_reset
-    name: "${name} 恢复出厂设置"
-    web_server:
-        sorting_group_id: diagnostic
-
-time:
-  - platform: sntp
-    id: my_time
-    servers:
-      - ntp1.aliyun.com
-      - ntp1.ntsc.ac.cn
-      - 0.pool.ntp.org
-text_sensor:
-  - platform: wifi_info
-    ip_address:
-      name: "${name} IP Address"
-      web_server:
-        sorting_group_id: diagnostic
-    ssid:
-      name: "${name} Connected SSID"
-      web_server:
-        sorting_group_id: diagnostic
-    bssid:
-      name: "${name} Connected BSSID"
-      web_server:
-        sorting_group_id: diagnostic
-    mac_address:
-      name: "${name} Mac Wifi Address"
-      web_server:
-        sorting_group_id: diagnostic
-    # scan_results:
-    #   name: Energy_meter Latest Scan Results
-    dns_address:
-      name: "${name} DNS Address"
-      web_server:
-        sorting_group_id: diagnostic
-  - platform: version
-    name: "ESPHome Version"
-    icon: mdi:new-box
-    web_server:
-        sorting_group_id: "diagnostic"
-  - platform: template
-    name: "ESPHome Project Version"
-    id: esphome_project_version_text_short
-    icon: "mdi:information-box"
-    entity_category: "diagnostic"
-    update_interval: 600s
-    lambda: |-
-      return { ESPHOME_PROJECT_VERSION };
-    web_server:
-        sorting_group_id: "diagnostic"
-  - platform: bl0906_carrot8848
-    bl0906_carrot8848_id: sensor_bl0906
-    calibration_status:
-      name: "${name} Calibration Status"
-      web_server:
-        sorting_group_id: diagnostic
+          sorting_group_id: diagnostic
 button:
   - platform: bl0906_carrot8848
-    bl0906_carrot8848_id: sensor_bl0906
+    bl0906_carrot8848_id: sensor_bl0910
     function: diagnose_persistence
     name: "1.检查电量持久化数据"
     web_server:
       sorting_group_id: diagnostic
   - platform: bl0906_carrot8848
-    bl0906_carrot8848_id: sensor_bl0906
+    bl0906_carrot8848_id: sensor_bl0910
     function: reset_energy
     name: "4.清空电量信息"
     icon: "mdi:restart"
     web_server:
       sorting_group_id: diagnostic
   - platform: bl0906_carrot8848
-    bl0906_carrot8848_id: sensor_bl0906
+    bl0906_carrot8848_id: sensor_bl0910
     function: save_energy
     name: "3.立即保存电量数据"
     web_server:
       sorting_group_id: diagnostic
   - platform: bl0906_carrot8848
-    bl0906_carrot8848_id: sensor_bl0906
+    bl0906_carrot8848_id: sensor_bl0910
     function: diagnose_statistics
     name: "2.检查电量统计数据"
     web_server:
@@ -667,7 +818,76 @@ number:
     optimistic: True
     set_action:
       lambda: |-
-        id(sensor_bl0906)->set_update_interval(static_cast<uint32_t>(x * 1000));
-        id(sensor_bl0906).start_poller();              // 重启轮询器使新间隔生效
+        id(sensor_bl0910)->set_update_interval(static_cast<uint32_t>(x * 1000));
+        id(sensor_bl0910).start_poller();              // 重启轮询器使新间隔生效
     web_server:
       sorting_group_id: diagnostic
+
+switch:
+  - platform: restart
+    name: "${name}重启"
+    web_server:
+          sorting_group_id: diagnostic
+  - platform: factory_reset
+    name: "${name}恢复出厂设置"
+    web_server:
+          sorting_group_id: diagnostic
+time:
+  - platform: sntp
+    id: my_time
+    servers: 
+      - ntp1.aliyun.com
+      - ntp1.ntsc.ac.cn
+      - 0.pool.ntp.org
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "${name} IP Address"
+      icon: "mdi:ip-network"
+      web_server:
+        sorting_group_id: diagnostic
+    ssid:
+      name: "${name} Connected SSID"
+      icon: "mdi:wifi-settings"
+      web_server:
+        sorting_group_id: diagnostic
+    bssid:
+      name: "${name} Connected BSSID"
+      icon: "mdi:router-wireless"
+      web_server:
+        sorting_group_id: diagnostic
+    mac_address:
+      name: "${name} Mac Wifi Address"
+      icon: "mdi:network-outline"
+      web_server:
+        sorting_group_id: diagnostic
+    # scan_results:
+    #   name: "${name} Latest Scan Results"
+    dns_address:
+      name: "${name} DNS Address" 
+      icon: "mdi:dns"
+      web_server:
+        sorting_group_id: diagnostic
+  - platform: version
+    name: "ESPHome Version"
+    icon: mdi:new-box
+    web_server:
+        sorting_group_id: "diagnostic"
+  - platform: template
+    name: "ESPHome Project Version"
+    id: esphome_project_version_text_short
+    icon: "mdi:information-box"
+    entity_category: "diagnostic"
+    update_interval: 600s
+    lambda: |-
+      return { ESPHOME_PROJECT_VERSION };
+    web_server:
+        sorting_group_id: "diagnostic"
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0910
+    calibration_status:
+      name: "校准状态"
+      web_server:
+        sorting_group_id: diagnostic
+
+

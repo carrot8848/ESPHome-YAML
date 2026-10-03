@@ -1,12 +1,13 @@
 /**
- * 6通道电量计量模块 —— 专用仪表盘
+ * 电量计量模块仪表盘（BL0906/BL0910，6/10/16/3x6 通道通用）
  *
  * 由 web_server 的 js_include 编译进固件（/0.js，ES module），离线可用。
  * 完全替换官方 v3 前端（<esp-app> 不加载即渲染为空）。
  *
  * 数据：GET /events (SSE) —— ping / state / log 事件
  * 控制：POST /switch/{名}/turn_on|turn_off、/button/{名}/press、/number/{名}/set?value=
- * 解析：全部按 sorting_group 分组名 + 实体名模式匹配，不硬编码通道名。
+ * 解析：分组名按 sorting_group 模式匹配；通道识别用「序数配对」（各类别分组内
+ *       位次相同 = 同一通道，不依赖实体名，通道名可任意自定义）。
  */
 'use strict';
 
@@ -22,7 +23,7 @@ function el(tag, cls, text) {
 }
 
 const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
-const DANGER_RE = /重启|恢复出厂|清空|删除|格式化/;
+const DANGER_RE = /重启|恢复出厂|清空|清零|删除|格式化/;
 const collator = new Intl.Collator('zh-Hans-CN', { numeric: true });
 
 function fmtUptime(sec) {
@@ -52,13 +53,16 @@ function splitState(e) {
 /* 校准状态判断：仅精确的 Calibrated 视为已校准，其余状态一律红色警示 */
 const isCalibrated = (e) =>
   /^calibrated$/i.test(String((e && (e.value ?? e.state)) ?? '').trim());
+/* 全部校准状态实体（多芯片固件每颗芯片一个，按名称排序保证顺序稳定） */
+const calibrationEnts = () =>
+  [...ents.values()].filter((e) => /校准状态|Calibration Status/i.test(e.name)).sort(byName);
 
 /* ---------- 运行状态 ---------- */
 const ents = new Map();   // id -> 实体（SSE state 首包为完整定义，后续只有 value/state）
 const history = [];       // 总功率历史（趋势线）
 const chHist = new Map(); // 各通道功率历史：key -> 数组（趋势图）
 const MAX_HISTORY = 240;
-let meta = { title: '6通道电量计量模块', uptime: null };
+let meta = { title: '电量计量模块', uptime: null };
 let online = false;
 let lastPing = 0;
 let rafPending = false;
@@ -68,7 +72,7 @@ document.body.innerHTML = `
 <div class="wrap">
   <header>
     <div>
-      <h1 id="h-title">6通道电量计量模块</h1>
+      <h1 id="h-title">电量计量模块</h1>
       <div class="sub">
         <span class="dot" id="h-dot"></span>
         <span id="h-conn">连接中…</span>
@@ -77,7 +81,7 @@ document.body.innerHTML = `
       </div>
     </div>
     <div class="head-actions">
-      <div class="head-badge">BL0906 · 6CH METER</div>
+      <div class="head-badge" id="h-badge">ENERGY METER</div>
       <button class="theme-btn" id="h-theme" type="button" title="切换明暗主题"></button>
     </div>
   </header>
@@ -87,7 +91,7 @@ document.body.innerHTML = `
     <section class="card hero">
       <div class="hero-top">
         <div class="hero-num">
-          <div class="label">6通道总功率</div>
+          <div class="label" id="tp-label">总功率</div>
           <div class="big"><span id="tp-v">--</span><span class="uom" id="tp-u"></span></div>
         </div>
         <div class="spark-box"><canvas id="spark"></canvas></div>
@@ -118,8 +122,8 @@ document.body.innerHTML = `
 </div>`;
 
 const refs = {};
-['h-title', 'h-dot', 'h-conn', 'h-uptime', 'h-theme', 'loading', 'main', 'chips',
-  'tp-v', 'tp-u', 'spark', 'energy', 'channels', 'charts', 'maint', 'logs',
+['h-title', 'h-dot', 'h-conn', 'h-uptime', 'h-theme', 'h-badge', 'loading', 'main', 'chips',
+  'tp-v', 'tp-u', 'tp-label', 'spark', 'energy', 'channels', 'charts', 'maint', 'logs',
   'modal', 'modal-msg', 'modal-yes', 'modal-no',
 ].forEach((id) => { refs[id] = document.getElementById(id); });
 
@@ -150,15 +154,44 @@ refs['h-theme'].addEventListener('click', () => {
 
 /* ---------- 实体查询 ---------- */
 const byName = (a, b) => collator.compare(a.name, b.name);
-const inGroup = (g) => [...ents.values()].filter((e) => e.sorting_group === g).sort(byName);
-const findEnt = (group, prefix) =>
-  inGroup(group).find((e) => e.name.startsWith(prefix + ' ')) || null;
-
-function channelKeys() {
-  const keys = new Set();
-  for (const e of inGroup('电流')) keys.add(e.name.split(/\s+/)[0]);
-  return [...keys].sort(collator.compare);
+/* 分组类别按组名模式匹配，兼容各固件的分组命名：
+ * 6/10ch:「电流」「功率」「电量」「今日电量」…「6通道总和/10通道总和」
+ * 16ch:  同上，总和为「通道总和」
+ * 3x6ch: 按相分组「A相电流」「A相功率」「A相今日电量」…「各路总和」          */
+const GRP = {
+  sum: (g) => /总和$/.test(g),
+  current: (g) => /电流$/.test(g),
+  power: (g) => /功率$/.test(g),
+  energy: (g) => /电量$/.test(g) && !/今日|昨日|本周|本月|今年/.test(g),
+  today: (g) => /今日/.test(g),
+  yesterday: (g) => /昨日/.test(g),
+  week: (g) => /本周/.test(g),
+  month: (g) => /本月/.test(g),
+  year: (g) => /今年/.test(g),
+};
+const entsOf = (pred) =>
+  [...ents.values()].filter((e) => pred(e.sorting_group || '')).sort(byName);
+const inGroup = (g) => entsOf((x) => x === g);
+/* ---------- 通道识别：序数配对（不依赖实体名，通道名可任意自定义） ----------
+ * 首包到达顺序 = yaml 声明顺序；每通道的电流/功率/电量实体按通道次序声明，
+ * 因此各类别分组内「位次相同」的实体属于同一通道。
+ * （协议里没有 yaml 的实体 id，SSE 的 id = "domain/显示名"，显示名改了就变，不能用作锚点） */
+const entsSeq = (pred) =>
+  [...ents.values()].filter((e) => pred(e.sorting_group || '')).sort((a, b) => (a._seq || 0) - (b._seq || 0));
+const chAt = (pred, i) => entsSeq(pred)[i] || null;
+/* 通道卡片标题 = 电流实体名去掉 "1." 序号前缀和「电流A/电流」尾缀，剩下的就是用户定义的通道名 */
+const channelLabel = (e) => {
+  const base = String(e.name).replace(/^\d+\./, '').replace(/\s*电流[ABab]?$/, '').trim();
+  return base || String(e.name);
+};
+/* 通道卡片展示顺序：按标题自然排序（只影响显示顺序，不影响位次配对） */
+function channelList() {
+  return entsSeq(GRP.current)
+    .map((e, i) => ({ e, i, label: channelLabel(e) }))
+    .sort((a, b) => collator.compare(a.label, b.label));
 }
+/* 去掉实体名前缀的节点名和 "1." 式序号（"10-ch ... 1.10通道总功率" → "10通道总功率"） */
+const cleanName = (name) => displayName(name).replace(/^\d+\./, '');
 
 /* ---------- 确认弹窗 ---------- */
 let modalResolve = null;
@@ -244,20 +277,30 @@ function renderChips() {
     box.append(chip);
   }
   // 校准状态芯片（放在基础传感器之后）：未校准整块红色
-  const calib = [...ents.values()].find((e) => /校准状态|Calibration Status/i.test(e.name));
-  if (calib) {
-    const ok = isCalibrated(calib);
+  // 多芯片固件（16ch/3x6）有多个校准状态实体：显示「已校准数/总数」，全部通过才绿色
+  const calibs = calibrationEnts();
+  if (calibs.length === 1) {
+    const ok = isCalibrated(calibs[0]);
     const chip = el('div', 'chip' + (ok ? '' : ' bad'));
     chip.append(el('span', 'clabel', '校准状态'));
-    chip.append(el('b', null, String(calib.state != null ? calib.state : '--')));
+    chip.append(el('b', null, String(calibs[0].state != null ? calibs[0].state : '--')));
+    box.append(chip);
+  } else if (calibs.length > 1) {
+    const okN = calibs.filter(isCalibrated).length;
+    const chip = el('div', 'chip' + (okN === calibs.length ? '' : ' bad'));
+    chip.append(el('span', 'clabel', '校准状态'));
+    chip.append(el('b', null, okN + '/' + calibs.length + ' 已校准'));
     box.append(chip);
   }
 }
 
 function renderHero() {
-  const sum = inGroup('6通道总和');
-  const tp = sum.find((e) => /总功率/.test(e.name));
+  const sum = entsOf(GRP.sum);
+  // 总功率：优先全局值（排除「1-10通道」这类分芯片区间命名的实体，16ch 固件会有多个）
+  const allTP = sum.filter((e) => /总功率/.test(e.name));
+  const tp = allTP.find((e) => !/\d+-\d+通道/.test(e.name)) || allTP[0] || null;
   const sp = tp ? splitState(tp) : { v: '--', u: '' };
+  if (tp) refs['tp-label'].textContent = cleanName(tp.name);
   refs['tp-v'].textContent = sp.v;
   refs['tp-u'].textContent = sp.u;
 
@@ -283,22 +326,24 @@ function renderHero() {
 function renderChannels() {
   const box = refs.channels;
   box.textContent = '';
-  for (const key of channelKeys()) {
-    const cur = findEnt('电流', key);
-    const pow = findEnt('功率', key);
+  const chans = channelList();
+  // 顶栏徽标：通道数确定后更新（6/10/16/3x6 通道固件共用同一份前端）
+  if (chans.length) refs['h-badge'].textContent = chans.length + 'CH METER';
+  for (const { e: cur, i, label } of chans) {
+    const pow = chAt(GRP.power, i);
     const stats = [
-      ['今日', findEnt('今日电量', key)],
-      ['昨日', findEnt('昨日电量', key)],
-      ['本周', findEnt('本周电量', key)],
-      ['本月', findEnt('本月电量', key)],
-      ['今年', findEnt('今年电量', key)],
-      ['累计', findEnt('电量', key)],
+      ['今日', chAt(GRP.today, i)],
+      ['昨日', chAt(GRP.yesterday, i)],
+      ['本周', chAt(GRP.week, i)],
+      ['本月', chAt(GRP.month, i)],
+      ['今年', chAt(GRP.year, i)],
+      ['累计', chAt(GRP.energy, i)],
     ];
     const active = !!(pow && Number(pow.value) > 0);
 
     const card = el('div', 'card ch' + (active ? ' active' : ''));
     const head = el('div', 'ch-head');
-    head.append(el('span', null, key));
+    head.append(el('span', null, label));
     head.append(el('span', 'badge' + (active ? ' on' : ''), active ? '运行中' : '空闲'));
 
     const cell = (label, e) => {
@@ -327,12 +372,12 @@ function renderMaint() {
   if (refs.maint.contains(active) && active.type === 'range') return;
 
   const all = [...inGroup('诊断'), ...inGroup('其它')];
-  const calib = all.find((e) => /校准状态|Calibration Status/i.test(e.name));
+  const calibs = calibrationEnts();
   const switches = all.filter((e) => e.domain === 'switch');
   const buttons = all.filter((e) => e.domain === 'button');
   const numbers = all.filter((e) => e.domain === 'number');
   // 校准状态已在顶部芯片展示，信息区不再重复
-  const infos = all.filter((e) => !['switch', 'button', 'number'].includes(e.domain) && e !== calib);
+  const infos = all.filter((e) => !['switch', 'button', 'number'].includes(e.domain) && !calibs.includes(e));
 
   const box = refs.maint;
   box.textContent = '';
@@ -494,12 +539,12 @@ function drawSpark() {
 function renderCharts() {
   const box = refs.charts;
   box.textContent = '';
-  for (const key of channelKeys()) {
-    const pow = findEnt('功率', key);
-    const hist = chHist.get(key) || [];
+  for (const { i, label } of channelList()) {
+    const pow = chAt(GRP.power, i);
+    const hist = (pow && chHist.get(pow.id)) || [];
     const card = el('div', 'card cchart');
     const head = el('div', 'cc-head');
-    head.append(el('span', 'cc-name', key + ' 功率'));
+    head.append(el('span', 'cc-name', label + ' 功率'));
     head.append(el('span', 'cc-val', pow && pow.state != null ? String(pow.state) : '--'));
     const cvbox = el('div', 'cc-box');
     const cv = el('canvas');
@@ -560,25 +605,24 @@ function connect() {
       prev.value = d.value;
       prev.state = d.state;
     } else {
+      d._seq = ents.size; // 首包到达顺序 = yaml 声明顺序，通道序数配对依据
       ents.set(d.id, d);
     }
-    // 总功率进趋势缓冲（首包与更新包都算一个采样点）
+    // 总功率进趋势缓冲（首包与更新包都算一个采样点；排除 16ch 分芯片的「1-10通道」区间实体）
     const grp = (d.sorting_group || (prev && prev.sorting_group)) || '';
-    if (grp === '6通道总和' && /总功率/.test(d.id)) {
+    if (/总和$/.test(grp) && /总功率/.test(d.id) && !/\d+-\d+通道/.test(d.id)) {
       const v = Number(d.value);
       if (Number.isFinite(v)) {
         history.push(v);
         if (history.length > MAX_HISTORY) history.shift();
       }
     }
-    // 各通道功率进各自的趋势缓冲
-    if (grp === '功率') {
-      const name = d.name || (prev && prev.name) || '';
-      const key = name.split(/\s+/)[0];
+    // 各通道功率进各自的趋势缓冲（键 = 实体 id，不依赖通道名）
+    if (GRP.power(grp)) {
       const v = Number(d.value);
-      if (key && Number.isFinite(v)) {
-        let arr = chHist.get(key);
-        if (!arr) { arr = []; chHist.set(key, arr); }
+      if (Number.isFinite(v)) {
+        let arr = chHist.get(d.id);
+        if (!arr) { arr = []; chHist.set(d.id, arr); }
         arr.push(v);
         if (arr.length > MAX_HISTORY) arr.shift();
       }
