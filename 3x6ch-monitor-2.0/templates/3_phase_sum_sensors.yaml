@@ -1,0 +1,176 @@
+# 3相系统监控模板
+# 包含WiFi信息、系统信息、时间配置等
+# 使用方法:
+# packages:
+#   system_monitoring: !include templates/system_monitoring_3phase.yaml
+defaults:
+  update_interval: 10s
+sensor:
+  # 总功率和总电量计算传感器
+  - platform: template
+    name: "A1+B1+C1功率和W"
+    id: ch1_total_power
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 2
+    lambda: |-
+      return id(chA1_power).state + id(chB1_power).state + id(chC1_power).state;
+    update_interval: ${update_interval}
+    icon: "mdi:lightning-bolt"
+    web_server:
+        sorting_group_id: sum_sensors
+        
+  - platform: template
+    name: "A1+B1+C1电量和kWh"
+    id: ch1_total_energy
+    unit_of_measurement: kWh
+    accuracy_decimals: 2
+    lambda: |-
+      return id(chA1_energy).state + id(chB1_energy).state + id(chC1_energy).state;
+    update_interval: ${update_interval}
+    device_class: energy
+    state_class: total_increasing
+    icon: "mdi:home-lightning-bolt"
+    web_server:
+        sorting_group_id: sum_sensors
+
+  - platform: template
+    name: "A2+B2+C2功率和W"
+    id: ch2_total_power
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 2
+    lambda: |-
+      return id(chA2_power).state + id(chB2_power).state + id(chC2_power).state;
+    update_interval: ${update_interval}
+    icon: "mdi:lightning-bolt"
+    web_server:
+        sorting_group_id: sum_sensors
+        
+  - platform: template
+    name: "A2+B2+C2电量和kWh"
+    id: ch2_total_energy
+    unit_of_measurement: kWh
+    accuracy_decimals: 2
+    lambda: |-
+      return id(chA2_energy).state + id(chB2_energy).state + id(chC2_energy).state;
+    update_interval: ${update_interval}
+    device_class: energy
+    state_class: total_increasing
+    icon: "mdi:home-lightning-bolt"
+    web_server:
+        sorting_group_id: sum_sensors
+
+  # - platform: template
+  #   name: "A3+B3+C3功率和W"
+  #   id: ch3_total_power
+  #   unit_of_measurement: "W"
+  #   device_class: power
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA3_power).state + id(chB3_power).state + id(chC3_power).state;
+  #   update_interval: ${update_interval}
+  #   icon: "mdi:lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+        
+  # - platform: template
+  #   name: "A3+B3+C3电量和kWh"
+  #   id: ch3_total_energy
+  #   unit_of_measurement: kWh
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA3_energy).state + id(chB3_energy).state + id(chC3_energy).state;
+  #   update_interval: ${update_interval}
+  #   device_class: energy
+  #   state_class: total_increasing
+  #   icon: "mdi:home-lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+
+  # - platform: template
+  #   name: "A4+B4+C4功率和W"
+  #   id: ch4_total_power
+  #   unit_of_measurement: "W"
+  #   device_class: power
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA4_power).state + id(chB4_power).state + id(chC4_power).state;
+  #   update_interval: ${update_interval}
+  #   icon: "mdi:lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+        
+  # - platform: template
+  #   name: "A4+B4+C4电量和kWh"
+  #   id: ch4_total_energy
+  #   unit_of_measurement: kWh
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA4_energy).state + id(chB4_energy).state + id(chC4_energy).state;
+  #   update_interval: ${update_interval}
+  #   device_class: energy
+  #   state_class: total_increasing
+  #   icon: "mdi:home-lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+
+  # - platform: template
+  #   name: "A5+B5+C5功率和W"
+  #   id: ch5_total_power
+  #   unit_of_measurement: "W"
+  #   device_class: power
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA5_power).state + id(chB5_power).state + id(chC5_power).state;
+  #   update_interval: ${update_interval}
+  #   icon: "mdi:lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+        
+  # - platform: template
+  #   name: "A5+B5+C5电量和kWh"
+  #   id: ch5_total_energy
+  #   unit_of_measurement: kWh
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA5_energy).state + id(chB5_energy).state + id(chC5_energy).state;
+  #   update_interval: ${update_interval}
+  #   device_class: energy
+  #   state_class: total_increasing
+  #   icon: "mdi:home-lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+
+  # - platform: template
+  #   name: "A6+B6+C6功率和W"
+  #   id: ch6_total_power
+  #   unit_of_measurement: "W"
+  #   device_class: power
+  #   state_class: measurement
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA6_power).state + id(chB6_power).state + id(chC6_power).state;
+  #   update_interval: ${update_interval}
+  #   icon: "mdi:lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors
+        
+  # - platform: template
+  #   name: "A6+B6+C6电量和kWh"
+  #   id: ch6_total_energy
+  #   unit_of_measurement: kWh
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA6_energy).state + id(chB6_energy).state + id(chC6_energy).state;
+  #   update_interval: ${update_interval}
+  #   device_class: energy
+  #   state_class: total_increasing
+  #   icon: "mdi:home-lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: sum_sensors

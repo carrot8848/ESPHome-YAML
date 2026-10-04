@@ -12,8 +12,8 @@
 |------|------|---------|---------|------|
 | 6 通道电量计量模块 | BL0906 | 101×50×23 mm | [6-ch-monitor-3.0](6-ch-monitor-3.0/) | [淘宝购买](https://item.taobao.com/item.htm?id=793797215362) |
 | 10 通道电量计量模块 | BL0910 | 123×50×23 mm | [10-ch-monitor-3.0](10-ch-monitor-3.0/) | [淘宝购买](https://item.taobao.com/item.htm?id=999413514343) |
-| 16 通道电量计量模块 | BL0906 + BL0910 | 120×55×23 mm | 待补充 | [淘宝购买](https://item.taobao.com/item.htm?id=999413514343) |
-| 3×6 通道电量计量模块 | BL0906 ×3 | 105×50×36 mm | 待补充 | [淘宝购买](https://item.taobao.com/item.htm?id=971222114086) |
+| 16 通道电量计量模块 | BL0906 + BL0910 | 120×55×23 mm | [16-ch-monitor-3.0](16-ch-monitor-3.0/) | [淘宝购买](https://item.taobao.com/item.htm?id=999413514343) |
+| 3×6 通道电量计量模块 | BL0906 ×3 | 105×50×36 mm | [3x6ch-monitor-2.0](3x6ch-monitor-2.0/) | [淘宝购买](https://item.taobao.com/item.htm?id=971222114086) |
 
 表中尺寸均不包含凸起部分。
 

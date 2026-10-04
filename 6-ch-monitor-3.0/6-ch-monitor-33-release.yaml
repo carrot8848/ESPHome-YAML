@@ -1,5 +1,5 @@
 substitutions:
-  name: "6-ch-mon-v3_3"
+  name: "6-ch-monitor-v3_3"
   friendly_name: "6通道电量计量模块v3.3"
   ch1: "ch_1"   #可根据需要修改名称
   ch2: "ch_2"   #可根据需要修改名称

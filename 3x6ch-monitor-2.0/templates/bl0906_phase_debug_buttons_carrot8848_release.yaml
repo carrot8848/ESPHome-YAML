@@ -1,0 +1,48 @@
+# BL0906相位调试按钮模板 (bl0906_carrot8848 组件版本)
+# 用于生成单个相位的所有调试按钮（bl0906_carrot8848 原生按钮平台）
+# 使用方法:
+# packages:
+#   phase_a_debug: !include
+#     file: templates/bl0906_phase_debug_buttons_carrot8848_release.yaml
+#     vars:
+#       phase_name: "A"
+#       phase_lower: "a"
+
+defaults:
+  phase_name: "A"
+  phase_lower: "a"
+
+button:
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0906_${phase_lower}
+    function: diagnose_persistence
+    name: "1.检查电量持久化数据${phase_name}相"
+    web_server:
+      sorting_group_id: diagnostic
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0906_${phase_lower}
+    function: diagnose_statistics
+    name: "2.检查电量统计数据${phase_name}相"
+    web_server:
+      sorting_group_id: diagnostic
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0906_${phase_lower}
+    function: save_energy
+    name: "3.立即保存电量数据${phase_name}相"
+    web_server:
+      sorting_group_id: diagnostic
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0906_${phase_lower}
+    function: reset_energy
+    name: "4.清空电量信息${phase_name}相"
+    icon: "mdi:restart"
+    web_server:
+      sorting_group_id: diagnostic
+
+text_sensor:
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0906_${phase_lower}
+    calibration_status:
+      name: "${phase_name}相校准状态"
+      web_server:
+        sorting_group_id: diagnostic

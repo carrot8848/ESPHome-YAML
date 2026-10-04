@@ -1,0 +1,124 @@
+# 3相系统监控模板
+# 包含WiFi信息、系统信息、时间配置等
+# 使用方法:
+# packages:
+#   system_monitoring: !include templates/system_monitoring_3phase_release_en.yaml
+
+sensor:
+  # 总功率和总电量计算传感器
+  # - platform: template
+  #   name: "A1+B1+C1 Power Sum W"
+  #   id: ch1_total_power
+  #   unit_of_measurement: "W"
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA1_power).state + id(chB1_power).state + id(chC1_power).state;
+  #   update_interval: 10s
+  #   icon: "mdi:lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: basic_sensors
+
+  # - platform: template
+  #   name: "A1+B1+C1 Energy Sum kWh"
+  #   id: ch1_total_energy
+  #   unit_of_measurement: kWh
+  #   accuracy_decimals: 2
+  #   lambda: |-
+  #     return id(chA1_energy).state + id(chB1_energy).state + id(chC1_energy).state;
+  #   update_interval: 10s
+  #   device_class: energy
+  #   state_class: total_increasing
+  #   icon: "mdi:home-lightning-bolt"
+  #   web_server:
+  #       sorting_group_id: basic_sensors
+
+  # WiFi信号强度传感器
+  - platform: wifi_signal
+    web_server:
+      sorting_group_id: diagnostic
+    name: "${name} WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    icon: "mdi:wifi-strength-2"
+
+  - platform: copy
+    web_server:
+      sorting_group_id: diagnostic
+    source_id: wifi_signal_db
+    name: "${name} WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+    icon: "mdi:wifi"
+text_sensor:
+  # WiFi信息传感器
+  - platform: wifi_info
+    ip_address:
+      name: ${name} IP Address
+      icon: "mdi:ip-network"
+      web_server:
+        sorting_group_id: diagnostic
+    ssid:
+      name: ${name} Connected SSID
+      icon: "mdi:wifi-settings"
+      web_server:
+        sorting_group_id: diagnostic
+    bssid:
+      name: ${name} Connected BSSID
+      icon: "mdi:access-point-network"
+      web_server:
+        sorting_group_id: diagnostic
+    mac_address:
+      name: ${name} Mac Wifi Address
+      icon: "mdi:network"
+      web_server:
+        sorting_group_id: diagnostic
+    dns_address:
+      name: ${name} DNS Address
+      icon: "mdi:dns"
+      web_server:
+        sorting_group_id: diagnostic
+
+switch:
+  # 系统控制开关
+  - platform: restart
+    name: "${name} Restart"
+    icon: "mdi:restart"
+    web_server:
+      sorting_group_id: diagnostic
+
+  - platform: factory_reset
+    name: "${name} Factory Reset"
+    icon: "mdi:restart-alert"
+    web_server:
+      sorting_group_id: diagnostic
+  # Example configuration entry
+
+  # - platform: safe_mode
+  #   name: "${name} Safe Mode"
+  #   web_server:
+  #     sorting_group_id: diagnostic
+# button:
+#   - platform: template
+#     name: "Restore Factory Settings"
+#     on_press:
+#       then:
+#         - lambda: |-
+#             // 选择性清除某些 preferences
+#             id(global_preferences)->remove("wifi_ssid");  // 清除 WiFi 设置
+#             id(global_preferences)->remove("wifi_password");
+#             // 以下 key 会被保留（不调用 remove）
+#             // - device_id
+#             // - calibration_data
+#             // 重启设备
+#             id(restart).perform();
+
+time:
+  - platform: sntp
+    id: my_time
+    servers:
+      - ntp1.aliyun.com
+      - ntp1.ntsc.ac.cn
+      - 0.pool.ntp.org

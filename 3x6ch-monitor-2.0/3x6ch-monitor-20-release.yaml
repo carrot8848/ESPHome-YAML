@@ -1,0 +1,361 @@
+# 3×6通道监控配置 - 模板化版本 (bl0906_carrot8848 组件版本)
+# 基于 6-ch-monitor-32-release.yaml 适配，使用 bl0906_carrot8848 预编译组件
+
+substitutions:
+  name: "3x6-ch-monitor"
+  friendly_name: "3x6通道电量计量模块"
+  chA1: "ch_A1"  #可根据需要修改名称
+  chA2: "ch_A2"  #可根据需要修改名称
+  chA3: "ch_A3"  #可根据需要修改名称
+  chA4: "ch_A4"  #可根据需要修改名称
+  chA5: "ch_A5"  #可根据需要修改名称
+  chA6: "ch_A6"  #可根据需要修改名称
+  chB1: "ch_B1"  #可根据需要修改名称
+  chB2: "ch_B2"  #可根据需要修改名称
+  chB3: "ch_B3"  #可根据需要修改名称
+  chB4: "ch_B4"  #可根据需要修改名称
+  chB5: "ch_B5"  #可根据需要修改名称
+  chB6: "ch_B6"  #可根据需要修改名称
+  chC1: "ch_C1"  #可根据需要修改名称
+  chC2: "ch_C2"  #可根据需要修改名称
+  chC3: "ch_C3"  #可根据需要修改名称
+  chC4: "ch_C4"  #可根据需要修改名称
+  chC5: "ch_C5"  #可根据需要修改名称
+  chC6: "ch_C6"  #可根据需要修改名称
+
+esphome:
+  name: "${name}"
+  name_add_mac_suffix: true
+  friendly_name: "${friendly_name}"
+  min_version: 2026.8.0
+  build_path: "/home/carrot8848/esphome_build/${name}"
+  project:
+    name: carrot8848.3x6-ch-monitor
+    version: "2.0"
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          auto interval_ms = static_cast<uint32_t>(id(bl0906_update_interval).state * 1000);
+          id(sensor_bl0906_a).set_update_interval(interval_ms);
+          id(sensor_bl0906_a).start_poller();
+          id(sensor_bl0906_b).set_update_interval(interval_ms);
+          id(sensor_bl0906_b).start_poller();
+          id(sensor_bl0906_c).set_update_interval(interval_ms);
+          id(sensor_bl0906_c).start_poller();
+
+preferences:
+  flash_write_interval: 5min
+esp32:
+  variant: ESP32C3
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+    # advanced:
+    #   enable_ota_rollback: false
+
+# 基础配置
+logger:
+  hardware_uart: UART0
+  level: debug
+  # 增加SPI相关的调试信息
+  logs:
+    sensor: warn
+
+api:
+ota:
+  - platform: esphome
+
+wifi:
+  # ssid: !secret wifi_ssid
+  # password: !secret wifi_password
+  # manual_ip:
+  #   static_ip: 192.168.5.11
+  #   gateway: 192.168.5.254
+  #   subnet: 255.255.255.0
+  ap:
+    password: ""
+
+captive_portal:
+
+web_server:
+  port: 80
+  version: 3
+  # 深度定制：自研仪表盘（energy_dashboard.*，6/10/16/3x6 通道通用）整体替换官方 v3 通用页面，编译进固件离线可用
+  # 注意：不能开 local: True —— local 模式设备直接返回内嵌官方页面，css/js include 完全不生效
+  css_url: ""   # 置空 = 不加载官方样式
+  js_url: ""    # 置空 = 不加载官方前端脚本（<esp-app> 不注册，页面由我们的 js 构建）
+  css_include: ../web-server-ui/energy_dashboard.css
+  js_include: ../web-server-ui/energy_dashboard.js
+  sorting_groups:
+    - id: basic_sensors
+      name: "基础传感器"
+      sorting_weight: 1
+    - id: sum_sensors
+      name: "各路总和"
+      sorting_weight: 2
+    - id: currentA
+      name: "A相电流"
+      sorting_weight: 20
+    - id: powerA
+      name: "A相功率"
+      sorting_weight: 30
+    - id: energyA
+      name: "A相电量"
+      sorting_weight: 40
+    - id: today_energyA
+      name: "A相今日电量"
+      sorting_weight: 41
+    - id: yesterday_energyA
+      name: "A相昨日电量"
+      sorting_weight: 42
+    - id: week_energyA
+      name: "A相本周电量"
+      sorting_weight: 43
+    - id: month_energyA
+      name: "A相本月电量"
+      sorting_weight: 44
+    - id: year_energyA
+      name: "A相今年电量"
+      sorting_weight: 45
+    - id: currentB
+      name: "B相电流"
+      sorting_weight: 50
+    - id: powerB
+      name: "B相功率"
+      sorting_weight: 60
+    - id: energyB
+      name: "B相电量"
+      sorting_weight: 70
+    - id: today_energyB
+      name: "B相今日电量"
+      sorting_weight: 71
+    - id: yesterday_energyB
+      name: "B相昨日电量"
+      sorting_weight: 72
+    - id: week_energyB
+      name: "B相本周电量"
+      sorting_weight: 73
+    - id: month_energyB
+      name: "B相本月电量"
+      sorting_weight: 74
+    - id: year_energyB
+      name: "B相今年电量"
+      sorting_weight: 75
+    - id: currentC
+      name: "C相电流"
+      sorting_weight: 80
+    - id: powerC
+      name: "C相功率"
+      sorting_weight: 90
+    - id: energyC
+      name: "C相电量"
+      sorting_weight: 100
+    - id: today_energyC
+      name: "C相今日电量"
+      sorting_weight: 101
+    - id: yesterday_energyC
+      name: "C相昨日电量"
+      sorting_weight: 102
+    - id: week_energyC
+      name: "C相本周电量"
+      sorting_weight: 103
+    - id: month_energyC
+      name: "C相本月电量"
+      sorting_weight: 104
+    - id: year_energyC
+      name: "C相今年电量"
+      sorting_weight: 105
+    - id: miscellaneous
+      name: "其它"
+      sorting_weight: 110
+    - id: diagnostic
+      name: "诊断"
+      sorting_weight: 120
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/carrot8848/bl0906_carrot8848
+      ref: main
+    components: [bl0906_carrot8848]
+    refresh: 0s
+status_led:
+  pin: GPIO2
+
+spi:
+  - id: spi_bus
+    mosi_pin: 18
+    miso_pin: 1
+    clk_pin: 19
+
+i2c:
+  sda: 5
+  scl: 4
+  scan: true
+  frequency: 400kHz
+  id: i2c_bus
+
+# 使用模板化packages
+packages:
+  # A相配置
+  phase_a_instance: !include
+    file: templates/bl0906_phase_instance_spi_template_carrot8848_release.yaml
+    vars:
+      cs_pin: 3
+      phase_name: "A"
+      phase_lower: "a"
+      instance_id: "0x906B0001"
+      ch1_name: "${chA1}"
+      ch2_name: "${chA2}"
+      ch3_name: "${chA3}"
+      ch4_name: "${chA4}"
+      ch5_name: "${chA5}"
+      ch6_name: "${chA6}"
+      current_group: "currentA"
+      power_group: "powerA"
+      energy_group: "energyA"
+      today_energy_group: "today_energyA"
+      yesterday_energy_group: "yesterday_energyA"
+      week_energy_group: "week_energyA"
+      month_energy_group: "month_energyA"
+      year_energy_group: "year_energyA"
+
+  phase_a_debug: !include
+    file: templates/bl0906_phase_debug_buttons_carrot8848_release.yaml
+    vars:
+      phase_name: "A"
+      phase_lower: "a"
+
+  # B相配置
+  phase_b_instance: !include
+    file: templates/bl0906_phase_instance_spi_template_carrot8848_release.yaml
+    vars:
+      cs_pin: 7
+      phase_name: "B"
+      phase_lower: "b"
+      instance_id: "0x906B0002"
+      ch1_name: "${chB1}"
+      ch2_name: "${chB2}"
+      ch3_name: "${chB3}"
+      ch4_name: "${chB4}"
+      ch5_name: "${chB5}"
+      ch6_name: "${chB6}"
+      current_group: "currentB"
+      power_group: "powerB"
+      energy_group: "energyB"
+      today_energy_group: "today_energyB"
+      yesterday_energy_group: "yesterday_energyB"
+      week_energy_group: "week_energyB"
+      month_energy_group: "month_energyB"
+      year_energy_group: "year_energyB"
+
+  phase_b_debug: !include
+    file: templates/bl0906_phase_debug_buttons_carrot8848_release.yaml
+    vars:
+      phase_name: "B"
+      phase_lower: "b"
+
+  # C相配置
+  phase_c_instance: !include
+    file: templates/bl0906_phase_instance_spi_template_carrot8848_release.yaml
+    vars:
+      cs_pin: 6
+      phase_name: "C"
+      phase_lower: "c"
+      instance_id: "0x906B0003"
+      ch1_name: "${chC1}"
+      ch2_name: "${chC2}"
+      ch3_name: "${chC3}"
+      ch4_name: "${chC4}"
+      ch5_name: "${chC5}"
+      ch6_name: "${chC6}"
+      current_group: "currentC"
+      power_group: "powerC"
+      energy_group: "energyC"
+      today_energy_group: "today_energyC"
+      yesterday_energy_group: "yesterday_energyC"
+      week_energy_group: "week_energyC"
+      month_energy_group: "month_energyC"
+      year_energy_group: "year_energyC"
+
+  phase_c_debug: !include
+    file: templates/bl0906_phase_debug_buttons_carrot8848_release.yaml
+    vars:
+      phase_name: "C"
+      phase_lower: "c"
+
+  # 系统监控
+  system_monitoring: !include templates/system_monitoring_3phase_release.yaml
+  # 总和传感器
+  3_phase_sum_sensors: !include templates/3_phase_sum_sensors.yaml
+
+# 全局按钮（跨相操作）
+# button:
+#   - platform: template
+#     name: "立即保存全部电量数据"
+#     icon: "mdi:content-save"
+#     on_press:
+#       then:
+#         - lambda: |-
+#             id(sensor_bl0906_a).save_energy_data();
+#             id(sensor_bl0906_b).save_energy_data();
+#             id(sensor_bl0906_c).save_energy_data();
+#             ESP_LOGI("main", "全部电量数据已强制保存");
+#     web_server:
+#       sorting_group_id: diagnostic
+#   - platform: template
+#     name: "重置全部累计电量"
+#     icon: "mdi:restart"
+#     on_press:
+#       then:
+#         - lambda: |-
+#             id(sensor_bl0906_a).reset_energy_data();
+#             id(sensor_bl0906_b).reset_energy_data();
+#             id(sensor_bl0906_c).reset_energy_data();
+#             ESP_LOGI("main", "全部累计电量数据已重置");
+#     web_server:
+#       sorting_group_id: diagnostic
+
+# 传感器更新间隔（运行时可调）
+number:
+  - platform: template
+    name: "传感器更新间隔"
+    id: bl0906_update_interval
+    unit_of_measurement: s
+    icon: "mdi:timer"
+    min_value: 1
+    max_value: 300
+    step: 1
+    initial_value: 10
+    restore_value: True
+    optimistic: True
+    set_action:
+      lambda: |-
+        auto interval_ms = static_cast<uint32_t>(x * 1000);
+        id(sensor_bl0906_a).set_update_interval(interval_ms);
+        id(sensor_bl0906_a).start_poller();
+        id(sensor_bl0906_b).set_update_interval(interval_ms);
+        id(sensor_bl0906_b).start_poller();
+        id(sensor_bl0906_c).set_update_interval(interval_ms);
+        id(sensor_bl0906_c).start_poller();
+    web_server:
+      sorting_group_id: diagnostic
+
+# 系统信息文本传感器（不包含在模板中）
+text_sensor:
+  - platform: version
+    name: "ESPHome Version"
+    icon: mdi:new-box
+    web_server:
+      sorting_group_id: "diagnostic"
+  - platform: template
+    name: "ESPHome Project Version"
+    id: esphome_project_version_text_short
+    icon: "mdi:information-box"
+    entity_category: "diagnostic"
+    update_interval: 600s
+    lambda: |-
+      return { ESPHOME_PROJECT_VERSION };
+    web_server:
+      sorting_group_id: "diagnostic"

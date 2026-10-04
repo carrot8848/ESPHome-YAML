@@ -1,0 +1,481 @@
+# BL0906相位实例模板 (bl0906_carrot8848 组件版本)
+# 用于生成单个相位的完整BL0906Carrot8848配置，包含电量统计功能
+# 使用方法:
+# packages:
+#   phase_a: !include
+#     file: templates/bl0906_phase_instance_spi_template_carrot8848_release.yaml
+#     vars:
+#       phase_name: "A"
+#       phase_lower: "a"
+#       instance_id: "0x906B0001"
+#       cs_pin: 3
+#       ch1_name: "${chA1}"
+#       ch2_name: "${chA2}"
+#       ch3_name: "${chA3}"
+#       ch4_name: "${chA4}"
+#       ch5_name: "${chA5}"
+#       ch6_name: "${chA6}"
+#       current_group: "currentA"
+#       power_group: "powerA"
+#       energy_group: "energyA"
+#       today_energy_group: "today_energyA"
+#       yesterday_energy_group: "yesterday_energyA"
+#       week_energy_group: "week_energyA"
+#       month_energy_group: "month_energyA"
+#       year_energy_group: "year_energyA"
+
+defaults:
+  phase_name: "A"
+  phase_lower: "a"
+  cs_pin: 3
+  instance_id: "0x906B0001"
+  transformer_ratio: 2000
+  ch1_name: "ch_A1"
+  ch2_name: "ch_A2"
+  ch3_name: "ch_A3"
+  ch4_name: "ch_A4"
+  ch5_name: "ch_A5"
+  ch6_name: "ch_A6"
+  current_group: "currentA"
+  power_group: "powerA"
+  energy_group: "energyA"
+  today_energy_group: "today_energyA"
+  yesterday_energy_group: "yesterday_energyA"
+  week_energy_group: "week_energyA"
+  month_energy_group: "month_energyA"
+  year_energy_group: "year_energyA"
+
+bl0906_carrot8848:
+  - id: sensor_bl0906_${phase_lower}
+    spi_id: spi_bus
+    cs_pin: ${cs_pin}
+    update_interval: 10s
+    energy_statistics: true
+    time_id: my_time
+    instance_id: ${instance_id}
+    eeprom_type: 24c04
+    transformer_ratio: ${transformer_ratio}
+    voltage_sampling_mode: resistor_divider
+    i2c_id: i2c_bus
+    address: 0x50
+
+sensor:
+  - platform: bl0906_carrot8848
+    bl0906_carrot8848_id: sensor_bl0906_${phase_lower}
+
+    frequency:
+      id: sensor_bl0906_${phase_lower}_frequency
+      name: '2.${phase_name}相电网频率'
+      web_server:
+        sorting_group_id: basic_sensors
+
+    temperature:
+      name: '${phase_name}相BL0906温度'
+      web_server:
+        sorting_group_id: miscellaneous
+
+    voltage:
+      name: '1.${phase_name}相线电压V'
+      icon: "mdi:lightning-bolt"
+      id: ${phase_name}_voltage
+      web_server:
+        sorting_group_id: basic_sensors
+
+    power_sum:
+      id: sensor_bl0906_${phase_lower}_power_sum
+      name: '3.${phase_name}相有功功率和'
+      web_server:
+        sorting_group_id: basic_sensors
+
+    energy_sum:
+      id: chs${phase_name}_energy_sum
+      name: '4.${phase_name}相电量和'
+      accuracy_decimals: 2
+      unit_of_measurement: kWh
+      web_server:
+        sorting_group_id: basic_sensors
+
+    # 总电量统计传感器（全局，跨日/周/月/年）
+    today_total_energy:
+      name: '5.${phase_name}相今日总电量'
+      unit_of_measurement: kWh
+      device_class: energy
+      accuracy_decimals: 2
+      web_server:
+        sorting_group_id: sum_sensors
+    yesterday_total_energy:
+      name: '6.${phase_name}相昨日总电量'
+      unit_of_measurement: kWh
+      device_class: energy
+      accuracy_decimals: 2
+      web_server:
+        sorting_group_id: sum_sensors
+    week_total_energy:
+      name: '7.${phase_name}相本周总电量'
+      unit_of_measurement: kWh
+      device_class: energy
+      accuracy_decimals: 2
+      web_server:
+        sorting_group_id: sum_sensors
+    month_total_energy:
+      name: '8.${phase_name}相本月总电量'
+      unit_of_measurement: kWh
+      device_class: energy
+      accuracy_decimals: 2
+      web_server:
+        sorting_group_id: sum_sensors
+    year_total_energy:
+      name: '9.${phase_name}相今年总电量'
+      unit_of_measurement: kWh
+      device_class: energy
+      accuracy_decimals: 2
+      web_server:
+        sorting_group_id: sum_sensors
+
+    # 通道1配置
+    ch1:
+      current:
+        name: "${ch1_name} 电流A"
+        id: ch${phase_name}1_current
+        web_server:
+          sorting_group_id: ${current_group}
+      power:
+        name: "${ch1_name} 功率W"
+        id: ch${phase_name}1_power
+        icon: "mdi:power-plug"
+        web_server:
+          sorting_group_id: ${power_group}
+      total_energy:
+        name: "${ch1_name} 总电量kWh"
+        id: ch${phase_name}1_energy
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${energy_group}
+      today_energy:
+        name: "${ch1_name} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${today_energy_group}
+      yesterday_energy:
+        name: "${ch1_name} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${yesterday_energy_group}
+      week_energy:
+        name: "${ch1_name} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${week_energy_group}
+      month_energy:
+        name: "${ch1_name} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${month_energy_group}
+      year_energy:
+        name: "${ch1_name} 今年电量Y"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${year_energy_group}
+
+    # 通道2配置
+    ch2:
+      current:
+        id: ch${phase_name}2_current
+        name: "${ch2_name} 电流A"
+        web_server:
+          sorting_group_id: ${current_group}
+      power:
+        id: ch${phase_name}2_power
+        name: "${ch2_name} 功率W"
+        icon: "mdi:power-plug"
+        web_server:
+          sorting_group_id: ${power_group}
+      total_energy:
+        name: "${ch2_name} 总电量kWh"
+        id: ch${phase_name}2_energy
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${energy_group}
+      today_energy:
+        name: "${ch2_name} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${today_energy_group}
+      yesterday_energy:
+        name: "${ch2_name} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${yesterday_energy_group}
+      week_energy:
+        name: "${ch2_name} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${week_energy_group}
+      month_energy:
+        name: "${ch2_name} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${month_energy_group}
+      year_energy:
+        name: "${ch2_name} 今年电量Y"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${year_energy_group}
+
+    # 通道3配置
+    ch3:
+      current:
+        id: ch${phase_name}3_current
+        name: "${ch3_name} 电流A"
+        web_server:
+          sorting_group_id: ${current_group}
+      power:
+        id: ch${phase_name}3_power
+        name: "${ch3_name} 功率W"
+        icon: "mdi:power-plug"
+        web_server:
+          sorting_group_id: ${power_group}
+      total_energy:
+        name: "${ch3_name} 总电量kWh"
+        id: ch${phase_name}3_energy
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${energy_group}
+      today_energy:
+        name: "${ch3_name} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${today_energy_group}
+      yesterday_energy:
+        name: "${ch3_name} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${yesterday_energy_group}
+      week_energy:
+        name: "${ch3_name} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${week_energy_group}
+      month_energy:
+        name: "${ch3_name} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${month_energy_group}
+      year_energy:
+        name: "${ch3_name} 今年电量Y"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${year_energy_group}
+
+    # 通道4配置
+    ch4:
+      current:
+        id: ch${phase_name}4_current
+        name: "${ch4_name} 电流A"
+        web_server:
+          sorting_group_id: ${current_group}
+      power:
+        id: ch${phase_name}4_power
+        name: "${ch4_name} 功率W"
+        icon: "mdi:power-plug"
+        web_server:
+          sorting_group_id: ${power_group}
+      total_energy:
+        name: "${ch4_name} 总电量kWh"
+        id: ch${phase_name}4_energy
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${energy_group}
+      today_energy:
+        name: "${ch4_name} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${today_energy_group}
+      yesterday_energy:
+        name: "${ch4_name} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${yesterday_energy_group}
+      week_energy:
+        name: "${ch4_name} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${week_energy_group}
+      month_energy:
+        name: "${ch4_name} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${month_energy_group}
+      year_energy:
+        name: "${ch4_name} 今年电量Y"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${year_energy_group}
+
+    # 通道5配置
+    ch5:
+      current:
+        id: ch${phase_name}5_current
+        name: "${ch5_name} 电流A"
+        web_server:
+          sorting_group_id: ${current_group}
+      power:
+        id: ch${phase_name}5_power
+        name: "${ch5_name} 功率W"
+        icon: "mdi:power-plug"
+        web_server:
+          sorting_group_id: ${power_group}
+      total_energy:
+        name: "${ch5_name} 总电量kWh"
+        id: ch${phase_name}5_energy
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${energy_group}
+      today_energy:
+        name: "${ch5_name} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${today_energy_group}
+      yesterday_energy:
+        name: "${ch5_name} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${yesterday_energy_group}
+      week_energy:
+        name: "${ch5_name} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${week_energy_group}
+      month_energy:
+        name: "${ch5_name} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${month_energy_group}
+      year_energy:
+        name: "${ch5_name} 今年电量Y"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${year_energy_group}
+
+    # 通道6配置
+    ch6:
+      current:
+        id: ch${phase_name}6_current
+        name: "${ch6_name} 电流A"
+        web_server:
+          sorting_group_id: ${current_group}
+      power:
+        id: ch${phase_name}6_power
+        name: "${ch6_name} 功率W"
+        icon: "mdi:power-plug"
+        web_server:
+          sorting_group_id: ${power_group}
+      total_energy:
+        name: "${ch6_name} 总电量kWh"
+        id: ch${phase_name}6_energy
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${energy_group}
+      today_energy:
+        name: "${ch6_name} 今日电量T"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${today_energy_group}
+      yesterday_energy:
+        name: "${ch6_name} 昨日电量"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${yesterday_energy_group}
+      week_energy:
+        name: "${ch6_name} 本周电量W"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${week_energy_group}
+      month_energy:
+        name: "${ch6_name} 本月电量M"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${month_energy_group}
+      year_energy:
+        name: "${ch6_name} 今年电量Y"
+        unit_of_measurement: kWh
+        device_class: energy
+        accuracy_decimals: 2
+        web_server:
+          sorting_group_id: ${year_energy_group}
